@@ -1,74 +1,80 @@
 package com.jhj.mysqlutil;
 
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
+import java.util.List;
+import java.util.Map;
 
 public class Test {
-
-	// JDBC driver name and database URL
-	static final String JDBC_DRIVER = "com.mysql.cj.jdbc.Driver";
-	static final String DB_URL = "jdbc:mysql://localhost:3306/mysqlutil?useUnicode=true&characterEncoding=utf8&autoReconnect=true&serverTimezone=Asia/Seoul&useOldAliasMetadataBehavior=true&zeroDateTimeNehavior=convertToNull&connectTimeout=60";
-
-	// Database credentials
-	static final String USER = "sbsst";
-	static final String PASS = "sbs123414";
-
 	public static void main(String[] args) {
-		Connection conn = null;
-		Statement stmt = null;
-		try {
-			// STEP 2: Register JDBC driver
-			Class.forName(JDBC_DRIVER);
+		MysqlUtil.setDBInfo("localhost", "sbsst", "sbs123414", "mysqlutil");
 
-			// STEP 3: Open a connection
-			System.out.println("Connecting to a selected database...");
-			conn = DriverManager.getConnection(DB_URL, USER, PASS);
-			System.out.println("Connected database successfully...");
+		MysqlUtil.setDevMode(true);
 
-			// STEP 4: Execute a query
-			System.out.println("Creating statement...");
-			stmt = conn.createStatement();
+		// select rows
+		SecSql sql1 = new SecSql();
+		sql1.append("SELECT * FROM article ORDER BY id DESC");
 
-			String sql = "SELECT * FROM article";
-			ResultSet rs = stmt.executeQuery(sql);
-			// STEP 5: Extract data from result set
-			while (rs.next()) {
-				// Retrieve by column name
-				int id = rs.getInt("id");
-				String regDate = rs.getString("regDate");
-				String title = rs.getString("title");
-				String body = rs.getString("body");
+		List<Map<String, Object>> articleListMap = MysqlUtil.selectRows(sql1);
+		System.out.println("articleListMap : " + articleListMap);
 
-				// Display values
-				System.out.print("id: " + id);
-				System.out.print(", regDate: " + regDate);
-				System.out.print(", title: " + title);
-				System.out.println(", body: " + body);
-			}
-			rs.close();
-		} catch (SQLException se) {
-			// Handle errors for JDBC
-			se.printStackTrace();
-		} catch (Exception e) {
-			// Handle errors for Class.forName
-			e.printStackTrace();
-		} finally {
-			// finally block used to close resources
-			try {
-				if (stmt != null)
-					conn.close();
-			} catch (SQLException se) {
-			} // do nothing
-			try {
-				if (conn != null)
-					conn.close();
-			} catch (SQLException se) {
-				se.printStackTrace();
-			} // end finally try
-		} // end try
-		System.out.println("Goodbye!");
-	}// end main
+		// select row
+		SecSql sql2 = new SecSql();
+		sql2.append("SELECT * FROM article WHERE id = ?", 1);
+		Map<String, Object> articleMap = MysqlUtil.selectRow(sql2);
+		System.out.println("articleMap : " + articleMap);
+
+		// select row string value
+		SecSql sql3 = new SecSql();
+		sql3.append("SELECT title FROM article WHERE id = ?", 1);
+		String title = MysqlUtil.selectRowStringValue(sql3);
+		System.out.println("title : " + title);
+
+		// select row int value
+		SecSql sql4 = new SecSql();
+		sql4.append("SELECT id FROM article WHERE id = ?", 1);
+		int id = MysqlUtil.selectRowIntValue(sql4);
+		System.out.println("memberId : " + id);
+
+		// select row boolean value
+		SecSql sql5 = new SecSql();
+		sql5.append("SELECT id = 1 FROM article WHERE id = ?", 1);
+		boolean idIs1 = MysqlUtil.selectRowBooleanValue(sql5);
+		System.out.println("id is 1 : " + idIs1);
+
+		// insert
+		String newTitle = "새 제목";
+		String newBody = "새 내용";
+
+		SecSql sql6 = new SecSql().append("INSERT INTO article");
+		sql6.append("SET regDate = NOW()");
+		sql6.append(", updateDate = NOW()");
+		sql6.append(", title = ?", newTitle);
+		sql6.append(", body = ?", newBody);
+		int newArticleId = MysqlUtil.insert(sql6);
+		System.out.println("newArticleId : " + newArticleId);
+
+		// update
+		SecSql sql7 = new SecSql();
+		sql7.append("UPDATE article");
+		sql7.append("SET updateDate = NOW()");
+		sql7.append(", title = CONCAT(title, '_NEW')");
+		sql7.append("WHERE id = ?", 3);
+		MysqlUtil.update(sql7);
+
+		SecSql sql8 = new SecSql();
+		sql8.append("SELECT title FROM article WHERE id = ?", 3);
+		String article3__title = MysqlUtil.selectRowStringValue(sql8);
+		System.out.println("article3__title : " + article3__title);
+
+		// delete
+		SecSql sql9 = new SecSql();
+		sql9.append("DELETE FROM article WHERE id = ?", newArticleId);
+		MysqlUtil.delete(sql9);
+
+		SecSql sql10 = new SecSql();
+		sql10.append("SELECT COUNT(*) AS cnt FROM article WHERE id = ?", newArticleId);
+		int count = MysqlUtil.selectRowIntValue(sql10);
+		System.out.println("count : " + count);
+
+		MysqlUtil.closeConnection();
+	}
 }
